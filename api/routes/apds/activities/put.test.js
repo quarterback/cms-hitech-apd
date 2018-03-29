@@ -6,7 +6,7 @@ const {
   loadActivity,
   userCanEditAPD,
   pickBody,
-  upsert,
+  update,
   addField,
   validate,
   save,
@@ -28,11 +28,13 @@ tap.test('apd activity PUT endpoint setup', async endpointTest => {
       loadActivity(),
       userCanEditAPD(ActivityModel),
       pickBody('name', 'description'),
-      upsert(ActivityModel),
+      update(ActivityModel),
       addField('id', 'id'),
-      validate,
+      validate({ errorPrefix: 'update-activity' }),
       save,
-      sendOne(ActivityModel)
+      sendOne(ActivityModel, {
+        fetch: { withRelated: ['approaches', 'expenses', 'goals.objectives'] }
+      })
     ),
     'apd activity PUT endpoint is registered'
   );

@@ -160,6 +160,24 @@ const sendManyMaker = (model, { fetch, idField = 'id', idParam = 'id' } = {}) =>
     return sendMany;
   });
 
+const updateMaker = (model, { idField = 'id', idParam = 'id' } = {}) =>
+  cache(['update', modelIndex(model), idField, idParam], () => {
+    const update = async (req, res, next) => {
+      try {
+        const existing = await model
+          .where({ [idField]: req.params[idParam] })
+          .fetch();
+        existing.set(req.body);
+        req.meta.built = existing;
+        next();
+      } catch (e) {
+        logger.error(req, e);
+        res.status(500).end();
+      }
+    };
+    return update;
+  });
+
 const upsertMaker = (model, { idField = 'id' } = {}) =>
   cache(['upsert', modelIndex(model), idField], () => {
     const upsert = async (req, res, next) => {
@@ -200,20 +218,29 @@ const upsertMaker = (model, { idField = 'id' } = {}) =>
     return upsert;
   });
 
-const validate = (req, res, next) => {
-  logger.silly(req, 'validating models');
-  try {
-    if (Array.isArray(req.meta.built)) {
-      req.meta.built.forEach(m => (m.validate ? m.validate() : null));
-    } else if (req.meta.built.validate) {
-      req.meta.built.validate();
-    }
-    next();
-  } catch (e) {
-    logger.error(req, e);
-    res.status(400).end();
-  }
-};
+const validateMaker = ({ errorPrefix = 'validation-error' } = {}) =>
+  cache(['validate', errorPrefix], () => {
+    const validate = async (req, res, next) => {
+      logger.silly(req, 'validating models');
+      try {
+        if (Array.isArray(req.meta.built)) {
+          await Promise.all(
+            req.meta.built.map(async m => (m.validate ? m.validate() : null))
+          );
+        } else if (req.meta.built.validate) {
+          await req.meta.built.validate();
+        }
+        next();
+      } catch (e) {
+        logger.error(req, e);
+        res
+          .status(400)
+          .send({ error: `${errorPrefix}-${e.message}` })
+          .end();
+      }
+    };
+    return validate;
+  });
 
 module.exports = {
   addField: addFieldMaker,
@@ -224,6 +251,7 @@ module.exports = {
   save,
   sendOne: sendOneMaker,
   sendMany: sendManyMaker,
+  update: updateMaker,
   upsert: upsertMaker,
-  validate
+  validate: validateMaker
 };

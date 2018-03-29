@@ -5,7 +5,7 @@ const {
   loadActivity,
   userCanEditAPD,
   pickBody,
-  upsert,
+  update,
   addField,
   validate,
   save,
@@ -20,10 +20,12 @@ module.exports = (app, ActivityModel = defaultActivityModel) => {
     loadActivity(),
     userCanEditAPD(ActivityModel),
     pickBody('name', 'description'),
-    upsert(ActivityModel),
+    update(ActivityModel),
     addField('id', 'id'),
-    validate,
+    validate({ errorPrefix: 'update-activity' }),
     save,
-    sendOne(ActivityModel)
+    sendOne(ActivityModel, {
+      fetch: { withRelated: ['approaches', 'expenses', 'goals.objectives'] }
+    })
   );
 };
