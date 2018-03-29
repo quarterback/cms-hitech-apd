@@ -7,8 +7,54 @@ const {
 const {
   loggedIn,
   loadActivity,
-  userCanEditAPD
+  userCanEditAPD,
+  expectArray,
+  deleteFromActivity,
+  sendOne
 } = require('../../../../middleware');
+
+const createGoalsAndObjectives = (GoalModel, ObjectiveModel) => async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const activityID = req.meta.activity.get('id');
+
+    logger.silly(req, 'creating new goal models');
+    await Promise.all(
+      req.body.map(async goal => {
+        if (goal.description) {
+          const goalModel = GoalModel.forge({
+            description: goal.description,
+            activity_id: activityID
+          });
+          await goalModel.save();
+          const goalID = goalModel.get('id');
+
+          if (Array.isArray(goal.objectives)) {
+            await Promise.all(
+              goal.objectives.map(async objective => {
+                if (typeof objective === 'string' && objective) {
+                  const objectiveModel = ObjectiveModel.forge({
+                    description: objective,
+                    activity_goal_id: goalID
+                  });
+                  await objectiveModel.save();
+                }
+              })
+            );
+          }
+        }
+      })
+    );
+
+    next();
+  } catch (e) {
+    logger.error(req, e);
+    res.status(500).end();
+  }
+};
 
 module.exports = (
   app,
@@ -22,75 +68,13 @@ module.exports = (
     loggedIn,
     loadActivity(),
     userCanEditAPD(ActivityModel),
-    async (req, res) => {
-      logger.silly(req, 'handling PUT /activities/:id/goals route');
-      logger.silly(
-        req,
-        `attempting to update goals on activity [${req.params.id}]`
-      );
-
-      try {
-        const activity = req.meta.activity;
-
-        if (!Array.isArray(req.body)) {
-          logger.verbose('request is not an array');
-          return res
-            .status(400)
-            .send({ error: 'edit-activity-invalid-goals' })
-            .end();
-        }
-
-        // Delete the previous goals and objectives for this activity
-        logger.silly(
-          'deleting previous goals and objectives for this activity'
-        );
-        const awaitingGoals = activity.related('goals').map(async goal => {
-          const awaitingObjectives = goal
-            .related('objectives')
-            .map(async objective => objective.destroy());
-          await Promise.all(awaitingObjectives);
-          return goal.destroy();
-        });
-        await Promise.all(awaitingGoals);
-
-        const alsoAwaiting = [];
-        const awaiting = req.body.map(async goal => {
-          if (goal.description) {
-            const goalModel = GoalModel.forge({
-              description: goal.description,
-              activity_id: activity.get('id')
-            });
-            await goalModel.save();
-            const goalID = goalModel.get('id');
-
-            if (Array.isArray(goal.objectives)) {
-              goal.objectives.forEach(async objective => {
-                if (typeof objective === 'string' && objective) {
-                  const objectiveModel = ObjectiveModel.forge({
-                    description: objective,
-                    activity_goal_id: goalID
-                  });
-                  alsoAwaiting.push(objectiveModel.save());
-                }
-              });
-            }
-          }
-        });
-
-        await Promise.all(awaiting);
-        await Promise.all(alsoAwaiting);
-
-        const updatedActivity = await ActivityModel.where({
-          id: activity.get('id')
-        }).fetch({
-          withRelated: ['goals.objectives']
-        });
-
-        return res.send(updatedActivity.toJSON());
-      } catch (e) {
-        logger.error(req, e);
-        return res.status(500).end();
-      }
-    }
+    expectArray(),
+    deleteFromActivity('goals'),
+    createGoalsAndObjectives(GoalModel, ObjectiveModel),
+    sendOne(ActivityModel, {
+      fetch: { withRelated: ['goals.objectives', 'approaches'] }
+    })
   );
 };
+
+module.exports.createGoalsAndObjectives = createGoalsAndObjectives;

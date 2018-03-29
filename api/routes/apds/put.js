@@ -1,27 +1,33 @@
-const pick = require('lodash.pick');
-
 const logger = require('../../logger')('apds route put');
-const { loggedIn, userCanEditAPD } = require('../../middleware');
+const {
+  loggedIn,
+  userCanEditAPD,
+  upsert,
+  save,
+  sendOne
+} = require('../../middleware');
+const { apd: defaultApdModel } = require('../../db').models;
 
-module.exports = app => {
-  logger.silly('setting up PUT /apds/:id route');
-  app.put('/apds/:id', loggedIn, userCanEditAPD(), async (req, res) => {
-    logger.silly(req, 'handling PUT /apds/:id route');
-    logger.silly(req, `attempting to update apd [${req.params.id}]`);
-
-    try {
-      logger.silly(req, 'updating apd fields');
-      logger.silly(req, 'filter body data to editable fields');
-      const newData = pick(req.body, ['status', 'period']);
-      const apd = req.meta.apd;
-      apd.set(newData);
-
-      await apd.save();
-      logger.silly(req, 'all done');
-      return res.send(apd.toJSON());
-    } catch (e) {
-      logger.error(req, e);
-      return res.status(500).end();
-    }
-  });
+const fixupBody = (req, res, next) => {
+  req.body = {
+    id: +req.params.id,
+    status: req.body.status,
+    period: req.body.period
+  };
+  next();
 };
+
+module.exports = (app, ApdModel = defaultApdModel) => {
+  logger.silly('setting up PUT /apds/:id route');
+  app.put(
+    '/apds/:id',
+    loggedIn,
+    userCanEditAPD(),
+    fixupBody,
+    upsert(ApdModel),
+    save,
+    sendOne(ApdModel)
+  );
+};
+
+module.exports.fixupBody = fixupBody;

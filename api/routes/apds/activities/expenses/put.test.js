@@ -11,16 +11,16 @@ const {
 } = require('../../../../middleware');
 const putEndpoint = require('./put');
 
-tap.test('apd activity goal PUT endpoint', async endpointTest => {
+tap.test('apd activity expenses PUT endpoint', async endpointTest => {
   const sandbox = sinon.createSandbox();
   const app = { put: sandbox.stub() };
 
   const ActivityModel = {};
 
-  const GoalModel = {
+  const ExpenseModel = {
     forge: sandbox.stub()
   };
-  const ObjectiveModel = {
+  const ExpenseEntryModel = {
     forge: sandbox.stub()
   };
 
@@ -42,27 +42,27 @@ tap.test('apd activity goal PUT endpoint', async endpointTest => {
   });
 
   endpointTest.test('setup', async setupTest => {
-    putEndpoint(app, ActivityModel, GoalModel, ObjectiveModel);
+    putEndpoint(app, ActivityModel, ExpenseModel, ExpenseEntryModel);
 
     setupTest.ok(
       app.put.calledWith(
-        '/activities/:id/goals',
+        '/activities/:id/expenses',
         loggedIn,
         loadActivity(),
         userCanEditAPD(ActivityModel),
         expectArray(),
-        deleteFromActivity('goals'),
+        deleteFromActivity('expenses'),
         sinon.match.func,
         sendOne(ActivityModel, {
           fetch: { withRelated: ['goals.objectives', 'approaches'] }
         })
       ),
-      'apd activity PUT endpoint is registered'
+      'apd activity expenses PUT endpoint is registered'
     );
   });
 
-  endpointTest.test('edit APD activity handler', async handlerTest => {
-    const handler = putEndpoint.createGoalsAndObjectives;
+  endpointTest.test('edit APD activity expenses handler', async handlerTest => {
+    const handler = putEndpoint.createExpenses;
     const next = sandbox.spy();
     let req;
 
@@ -95,66 +95,92 @@ tap.test('apd activity goal PUT endpoint', async endpointTest => {
     handlerTest.test('updates valid goals', async validTest => {
       req.body = [
         {
-          description: 'goal 1',
-          objectives: ['objective 1.1', 'objective 1.2']
+          name: 'expense 1',
+          entries: [
+            {
+              year: 1,
+              amount: 1,
+              description: 'one'
+            },
+            {
+              year: 2,
+              amount: 2,
+              description: 'two'
+            }
+          ]
         },
-        { description: 'goal 2', objectives: ['objective 2.1'] },
-        { hello: 'world', objectives: ['objective 3.1', 'objective 3.2'] }
+        {
+          name: 'expense 2',
+          entries: [
+            {
+              year: 3,
+              amount: 3,
+              description: 'three'
+            }
+          ]
+        },
+        { hello: 'world', entries: ['entry 3.1', 'entry 3.2'] }
       ];
 
-      GoalModel.forge.returns({
+      ExpenseModel.forge.returns({
         save: sinon.stub().resolves(),
         get: sinon
           .stub()
           .withArgs('id')
-          .returns('goal-id')
+          .returns('expense-id')
       });
 
-      ObjectiveModel.forge.returns({
+      ExpenseEntryModel.forge.returns({
         save: sinon.stub().resolves()
       });
 
-      await handler(GoalModel, ObjectiveModel)(req, res, next);
+      await handler(ExpenseModel, ExpenseEntryModel)(req, res, next);
 
       validTest.ok(
-        GoalModel.forge.calledWith({
-          description: 'goal 1',
+        ExpenseModel.forge.calledWith({
+          name: 'expense 1',
           activity_id: 'activity-id'
         }),
         'first goal created'
       );
       validTest.ok(
-        ObjectiveModel.forge.calledWith({
-          description: 'objective 1.1',
-          activity_goal_id: 'goal-id'
+        ExpenseEntryModel.forge.calledWith({
+          year: 1,
+          amount: 1,
+          description: 'one',
+          expense_id: 'expense-id'
         }),
         'first goal, first objective created'
       );
       validTest.ok(
-        ObjectiveModel.forge.calledWith({
-          description: 'objective 1.2',
-          activity_goal_id: 'goal-id'
+        ExpenseEntryModel.forge.calledWith({
+          year: 2,
+          amount: 2,
+          description: 'two',
+          expense_id: 'expense-id'
         }),
         'first goal, second objective created'
       );
 
       validTest.ok(
-        GoalModel.forge.calledWith({
-          description: 'goal 2',
+        ExpenseModel.forge.calledWith({
+          name: 'expense 2',
           activity_id: 'activity-id'
         }),
         'second goal created'
       );
       validTest.ok(
-        ObjectiveModel.forge.calledWith({
-          description: 'objective 2.1',
-          activity_goal_id: 'goal-id'
+        ExpenseEntryModel.forge.calledWith({
+          year: 3,
+          amount: 3,
+          description: 'three',
+          expense_id: 'expense-id'
         }),
         'second goal, first objective created'
       );
 
-      validTest.ok(GoalModel.forge.calledTwice, 'two goals created');
-      validTest.ok(ObjectiveModel.forge.calledThrice, 'three goals created');
+      validTest.ok(ExpenseModel.forge.calledTwice, 'two goals created');
+      validTest.ok(ExpenseEntryModel.forge.calledThrice, 'three goals created');
       validTest.ok(next.called, 'next is called');
     });
   });
