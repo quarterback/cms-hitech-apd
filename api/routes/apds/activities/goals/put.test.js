@@ -50,7 +50,7 @@ tap.test('apd activity goal PUT endpoint', async endpointTest => {
         loggedIn,
         loadActivity(),
         userCanEditAPD(ActivityModel),
-        expectArray(),
+        expectArray(true, { error: 'edit-activity-invalid-goals' }),
         deleteFromActivity('goals'),
         sinon.match.func,
         sendOne(ActivityModel, {

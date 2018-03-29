@@ -2,20 +2,13 @@ const logger = require('../../logger')('apds route put');
 const {
   loggedIn,
   userCanEditAPD,
+  pickBody,
   upsert,
+  addField,
   save,
   sendOne
 } = require('../../middleware');
 const { apd: defaultApdModel } = require('../../db').models;
-
-const fixupBody = (req, res, next) => {
-  req.body = {
-    id: +req.params.id,
-    status: req.body.status,
-    period: req.body.period
-  };
-  next();
-};
 
 module.exports = (app, ApdModel = defaultApdModel) => {
   logger.silly('setting up PUT /apds/:id route');
@@ -23,11 +16,10 @@ module.exports = (app, ApdModel = defaultApdModel) => {
     '/apds/:id',
     loggedIn,
     userCanEditAPD(),
-    fixupBody,
+    pickBody('status', 'period'),
     upsert(ApdModel),
+    addField('id', 'id'),
     save,
     sendOne(ApdModel)
   );
 };
-
-module.exports.fixupBody = fixupBody;

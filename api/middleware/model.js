@@ -1,4 +1,5 @@
 const logger = require('../logger')('model middleware');
+const pick = require('lodash.pick');
 const { cache, modelIndex } = require('./cache');
 
 const addFieldMaker = ({ fieldName, fromParam = 'id' }) =>
@@ -66,8 +67,8 @@ const deleteFromActivityMaker = relation =>
     return deleteFromActivity;
   });
 
-const expectArrayMaker = (expect = true) =>
-  cache(['expectArray', expect], () => {
+const expectArrayMaker = (expect = true, { error = 'not-array' } = {}) =>
+  cache(['expectArray', expect, error], () => {
     const expectArray = (req, res, next) => {
       logger.silly(
         req,
@@ -84,9 +85,25 @@ const expectArrayMaker = (expect = true) =>
           expect ? ' not' : ''
         }`
       );
-      return res.send(400).end();
+      return res
+        .status(400)
+        .send({ error })
+        .end();
     };
     return expectArray;
+  });
+
+const pickBodyMaker = (...fields) =>
+  cache(['pickBodyMaker', ...fields], () => {
+    const pickBody = (req, res, next) => {
+      if (Array.isArray(req.body)) {
+        req.body = req.body.map(o => pick(o, fields));
+      } else {
+        req.body = pick(req.body, fields);
+      }
+      next();
+    };
+    return pickBody;
   });
 
 const save = async (req, res, next) => {
@@ -203,6 +220,7 @@ module.exports = {
   build: buildMaker,
   deleteFromActivity: deleteFromActivityMaker,
   expectArray: expectArrayMaker,
+  pickBody: pickBodyMaker,
   save,
   sendOne: sendOneMaker,
   sendMany: sendManyMaker,

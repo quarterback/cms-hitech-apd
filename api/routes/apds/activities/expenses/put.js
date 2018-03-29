@@ -67,7 +67,7 @@ module.exports = (
     loggedIn,
     loadActivity(),
     userCanEditAPD(ActivityModel),
-    expectArray(),
+    expectArray(true, { error: 'edit-activity-invalid-expenses' }),
     deleteFromActivity('expenses'),
     createExpenses(ExpenseModel, ExpenseEntryModel),
     sendOne(ActivityModel, {

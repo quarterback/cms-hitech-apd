@@ -4,20 +4,13 @@ const {
   loggedIn,
   loadActivity,
   userCanEditAPD,
+  pickBody,
   upsert,
+  addField,
   validate,
   save,
   sendOne
 } = require('../../../middleware');
-
-const fixupBody = (req, res, next) => {
-  req.body = {
-    id: +req.params.id,
-    name: req.body.name,
-    description: req.body.description
-  };
-  next();
-};
 
 module.exports = (app, ActivityModel = defaultActivityModel) => {
   logger.silly('setting up PUT /activities/:id route');
@@ -26,12 +19,11 @@ module.exports = (app, ActivityModel = defaultActivityModel) => {
     loggedIn,
     loadActivity(),
     userCanEditAPD(ActivityModel),
-    fixupBody,
+    pickBody('name', 'description'),
     upsert(ActivityModel),
+    addField('id', 'id'),
     validate,
     save,
     sendOne(ActivityModel)
   );
 };
-
-module.exports.fixupBody = fixupBody;

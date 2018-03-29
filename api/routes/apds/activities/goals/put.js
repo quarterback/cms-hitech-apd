@@ -68,7 +68,7 @@ module.exports = (
     loggedIn,
     loadActivity(),
     userCanEditAPD(ActivityModel),
-    expectArray(),
+    expectArray(true, { error: 'edit-activity-invalid-goals' }),
     deleteFromActivity('goals'),
     createGoalsAndObjectives(GoalModel, ObjectiveModel),
     sendOne(ActivityModel, {

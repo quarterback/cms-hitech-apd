@@ -50,7 +50,7 @@ tap.test('apd activity expenses PUT endpoint', async endpointTest => {
         loggedIn,
         loadActivity(),
         userCanEditAPD(ActivityModel),
-        expectArray(),
+        expectArray(true, { error: 'edit-activity-invalid-expenses' }),
         deleteFromActivity('expenses'),
         sinon.match.func,
         sendOne(ActivityModel, {
