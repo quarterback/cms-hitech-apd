@@ -7,12 +7,15 @@ const syncResponder = (UserModel = defaultUserModel) =>
   cache(
     ['user endpoint sync responder', modelIndex(UserModel)],
     () => async req => {
+      logger.silly(req, `requesting to edit user id=${req.params.id}`);
       const user = await UserModel.where({ id: req.params.id }).fetch();
       if (!user) {
+        logger.verbose(req, 'user not found');
         const error = new Error();
         error.statusCode = 404;
         throw error;
       }
+      logger.silly(req, user.toJSON());
       return { model: user, action: 'edit-user' };
     }
   );
