@@ -8,9 +8,11 @@ const synchronizeAll = getSpecifics =>
       let action;
 
       try {
-        const { modelClass, foreignKey, action: actionToReport } = getSpecifics(
-          req
-        );
+        const {
+          modelClass,
+          foreignKey,
+          action: actionToReport
+        } = await getSpecifics(req);
         action = actionToReport;
 
         await modelClass.synchronize(req.body, foreignKey, false);
@@ -22,10 +24,11 @@ const synchronizeAll = getSpecifics =>
         next();
       } catch (e) {
         if (e.statusCode) {
-          res
-            .status(e.statusCode)
-            .send({ action, ...e.error })
-            .end();
+          res.status(e.statusCode);
+          if (e.error) {
+            res.send({ action, ...e.error });
+          }
+          res.end();
         } else {
           logger.error(req, e);
           res.status(500).end();
@@ -40,7 +43,7 @@ const synchronizeSpecific = getModelToSync =>
     () => async (req, res, next) => {
       let action;
       try {
-        const { model, action: actionToReport } = getModelToSync(req);
+        const { model, action: actionToReport } = await getModelToSync(req);
         action = actionToReport;
         await model.synchronize(req.body);
 
@@ -51,10 +54,11 @@ const synchronizeSpecific = getModelToSync =>
         next();
       } catch (e) {
         if (e.statusCode) {
-          res
-            .status(e.statusCode)
-            .send({ action, ...e.error })
-            .end();
+          res.status(e.statusCode);
+          if (e.error) {
+            res.send({ action, ...e.error });
+          }
+          res.end();
         } else {
           logger.error(req, e);
           res.status(500).end();
