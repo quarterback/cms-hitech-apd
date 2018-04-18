@@ -36,7 +36,7 @@ tap.test('users endpoint | PUT /users/:userID', async putUsersTests => {
           json: { email: 'user2@email' }
         });
         invalidTest.equal(response.statusCode, 400, 'gives a 400 status code');
-        invalidTest.same(body, { error: 'edit-user-email-exists' });
+        invalidTest.same(body, { action: 'edit-user', error: 'email-exists' });
       }
     );
 
@@ -46,7 +46,7 @@ tap.test('users endpoint | PUT /users/:userID', async putUsersTests => {
         json: { password: 'password' }
       });
       invalidTest.equal(response.statusCode, 400, 'gives a 400 status code');
-      invalidTest.same(body, { error: 'edit-user-weak-password' });
+      invalidTest.same(body, { action: 'edit-user', error: 'weak-password' });
     });
 
     authenticatedTests.test('with valid user info', async validTest => {

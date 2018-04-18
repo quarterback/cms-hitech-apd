@@ -98,6 +98,17 @@ module.exports = (zxcvbn = defaultZxcvbn, bcrypt = defaultBcrypt) => ({
         phone: this.get('phone'),
         state_id: this.get('state_id')
       };
+    },
+
+    static: {
+      updateableFields: [
+        'email',
+        'password',
+        'name',
+        'position',
+        'phone',
+        'state_id'
+      ]
     }
   }
 });
